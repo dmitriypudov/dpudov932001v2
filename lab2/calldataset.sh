@@ -13,7 +13,7 @@ givename() {
 
 createfile() {
   exec 9>/shared_volume/lock_file
-  flock -n 9
+  flock 9
 
   filename=$(givename)
   echo "$containerid - $filename" > "/shared_volume/$filename"
