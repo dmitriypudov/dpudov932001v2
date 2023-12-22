@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/sh -e
+
+containerid=$(uname -n)
 
 givename() {
   for i in $(seq -w 1 1000); do
@@ -9,26 +11,25 @@ givename() {
   done
 }
 
-exec 9>/shared_volume/lock_file
-flock -n 9 || exit 1
+createfile() {
+  exec 9>/shared_volume/lock_file
+  flock -n 9
 
-filename=$(givename)
-if [ -z "$filename" ]; then
-  echo "All filenames are already taken."
-  exit 1
-fi
+  filename=$(givename)
+  echo "$containerid - $filename" > "/shared_volume/$filename"
 
-container_id=$(uname -n)
-file_counter=1
+  flock -u 9
+  exec 9>&-
+}
 
+deletefile() {
+  file=$(<"/shared_volume/$filename")
+  rm -f "/shared_volume/$filename"
+  echo "$containerid : $file"
+}
 
-echo "$container_id - $file_counter" > "/shared_volume/$filename"
-
-sleep 1
-
-
-rm "/shared_volume/$filename"
-
-
-flock -u 9
-exec 9>&-
+while true; do
+  createfile
+  sleep 1
+  deletefile
+done
